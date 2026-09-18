@@ -1,0 +1,14 @@
+[project]
+name = "cgp-compliance"
+version = "0.1.0"
+description = "Règles déterministes de conformité : classification, formulations, mentions, périmètre."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "cgp-domain",
+  "cgp-params",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.8,<0.9"]
+build-backend = "uv_build"

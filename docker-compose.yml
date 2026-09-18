@@ -1,0 +1,24 @@
+# Environnement local : PostgreSQL 16 + pgvector. Image épinglée par digest (index multi-architecture).
+# Le mot de passe ci-dessous ne sert qu'à cette instance locale, jamais réutilisé dans un environnement AWS.
+name: cgp
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16@sha256:ccc6e83d6e35e931dc7c5def2022729d5a6c370318d099181995567ff1fb4d6b
+    container_name: cgp-postgres
+    environment:
+      POSTGRES_DB: cgp
+      POSTGRES_USER: cgp
+      POSTGRES_PASSWORD: cgp-local-only
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U cgp -d cgp"]
+      interval: 5s
+      timeout: 3s
+      retries: 12
+
+volumes:
+  pgdata: {}

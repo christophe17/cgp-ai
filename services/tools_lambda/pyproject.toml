@@ -1,0 +1,17 @@
+[project]
+name = "cgp-tools-lambda"
+version = "0.1.0"
+description = "Lambdas d'outils : profile, calc, legal, usage (documents différé)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "cgp-domain",
+  "cgp-calc-engine",
+  "cgp-params",
+  "cgp-legal-rag",
+  "cgp-storage",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.8,<0.9"]
+build-backend = "uv_build"

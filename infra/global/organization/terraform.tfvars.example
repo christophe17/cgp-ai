@@ -1,0 +1,21 @@
+# Copier en terraform.tfvars (ignoré par git : adresses e-mail racine des comptes).
+management_account_id = "749020018778"
+
+# Plafonds approuvés le 2026-09-18 en euros (dev 60, staging 120, prod 40), saisis arrondis en USD.
+member_accounts = {
+  dev     = { email = "prenom.nom+cgp-dev@example.com", budget_limit_usd = 70 }
+  staging = { email = "prenom.nom+cgp-staging@example.com", budget_limit_usd = 140 }
+  prod    = { email = "prenom.nom+cgp-prod@example.com", budget_limit_usd = 50 }
+}
+organization_budget_limit_usd = 260
+budget_notification_emails    = ["prenom.nom@example.com"]
+
+# Passer à true après l'activation d'Identity Center dans la console (guide 00, étape 4).
+identity_center_enabled = false
+operator = {
+  user_name   = "prenom"
+  given_name  = "Prénom"
+  family_name = "Nom"
+  email       = "prenom.nom@example.com"
+}
+operator_break_glass = false

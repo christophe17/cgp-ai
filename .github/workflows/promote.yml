@@ -1,0 +1,57 @@
+# Promotion d'une couche vers staging puis prod : plan, approbation de l'environnement GitHub,
+# apply de l'artefact de plan relu. Déclenchement manuel depuis main.
+name: promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      layer:
+        description: Couche à promouvoir
+        required: true
+        type: choice
+        options: [foundation, platform, agents, frontend]
+      target:
+        description: Cible finale
+        required: true
+        type: choice
+        default: staging
+        options: [staging, prod]
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: promote-${{ inputs.layer }}
+  cancel-in-progress: false
+
+jobs:
+  guard:
+    name: promotion depuis main uniquement
+    runs-on: ubuntu-24.04
+    steps:
+      - run: |
+          if [ "${{ github.ref }}" != "refs/heads/main" ]; then
+            echo "La promotion ne part que de main (ref actuelle : ${{ github.ref }})."; exit 1
+          fi
+
+  staging:
+    needs: guard
+    uses: ./.github/workflows/terraform-layer.yml
+    with:
+      env: staging
+      layer: ${{ inputs.layer }}
+      apply: true
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
+
+  prod:
+    if: inputs.target == 'prod' && !cancelled() && needs.staging.result == 'success'
+    needs: staging
+    uses: ./.github/workflows/terraform-layer.yml
+    with:
+      env: prod
+      layer: ${{ inputs.layer }}
+      apply: true
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}

@@ -1,0 +1,73 @@
+# Détection de dérive nocturne sur staging et prod : plan -detailed-exitcode ; une dérive
+# (code 2) fait échouer le job et ouvre ou met à jour une issue « Dérive Terraform ».
+name: drift
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+  issues: write
+
+env:
+  TF_VERSION: "1.15.8"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "0"
+  AWS_REGION: eu-central-1
+
+jobs:
+  plan:
+    name: dérive ${{ matrix.env }}/${{ matrix.layer }}
+    runs-on: ubuntu-24.04
+    strategy:
+      fail-fast: false
+      matrix:
+        env: [staging, prod]
+        layer: [foundation, platform, agents, frontend]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: Identifiant du compte
+        id: account
+        run: |
+          case "${{ matrix.env }}" in
+            staging) echo "id=${{ vars.AWS_ACCOUNT_ID_STAGING }}" >> "$GITHUB_OUTPUT" ;;
+            prod) echo "id=${{ vars.AWS_ACCOUNT_ID_PROD }}" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - uses: aws-actions/configure-aws-credentials@e1253824e5c10ff9df46874f81ed3ec929e19cfd # v6.3.0
+        with:
+          role-to-assume: arn:aws:iam::${{ steps.account.outputs.id }}:role/cgp-${{ matrix.env }}-github-plan
+          aws-region: ${{ env.AWS_REGION }}
+      - name: terraform plan -detailed-exitcode
+        id: plan
+        working-directory: infra/envs/${{ matrix.env }}/${{ matrix.layer }}
+        run: |
+          terraform init -backend-config=backend.hcl >/dev/null
+          set +e
+          terraform plan -lock=false -detailed-exitcode -no-color > plan.txt
+          code=$?
+          set -e
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          tail -c 20000 plan.txt >> "$GITHUB_STEP_SUMMARY"
+          exit $code
+      - name: Ouvrir ou mettre à jour l'issue de dérive
+        if: failure() && steps.plan.outputs.exitcode == '2'
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const title = `Dérive Terraform : ${{ matrix.env }}/${{ matrix.layer }}`;
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const body = `Le plan nocturne a détecté une dérive entre l'état et les ressources réelles.\n\nRun : ${runUrl}\n\nRunbook : docs/runbooks/derive-terraform.md`;
+            const { data: issues } = await github.rest.issues.listForRepo({ ...context.repo, state: 'open', labels: 'drift', per_page: 100 });
+            const existing = issues.find((i) => i.title === title);
+            if (existing) {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: existing.number, body });
+            } else {
+              await github.rest.issues.create({ ...context.repo, title, body, labels: ['drift'] });
+            }

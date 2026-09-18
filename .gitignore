@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+coverage.xml
+htmlcov/
+dist/
+build/
+
+# Rapports générés (artefacts de CI, jamais commités)
+reports/
+
+# Notebooks
+.ipynb_checkpoints/
+
+# Terraform (les verrous de providers des racines sont commités, pas ceux des modules)
+**/.terraform/
+infra/modules/*/.terraform.lock.hcl
+infra/global/modules/*/.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+
+# Secrets et environnement local
+.env
+.env.*
+*.pem
+
+# Frontend
+node_modules/
+.next/
+
+# Système
+.DS_Store
+
+# Variables locales du bootstrap (adresses e-mail racine des comptes) ; la forme est dans terraform.tfvars.example
+infra/global/**/terraform.tfvars

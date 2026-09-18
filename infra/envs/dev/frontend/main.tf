@@ -1,0 +1,9 @@
+# Couche frontend de l'environnement dev : modules frontend.
+
+module "frontend" {
+  source = "../../../modules/frontend"
+
+  project = local.project
+  env     = local.env
+  tags    = local.tags
+}

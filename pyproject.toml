@@ -1,0 +1,132 @@
+[project]
+name = "cgp"
+version = "0.1.0"
+description = "CLI opérateur de la plateforme de conseil patrimonial multi-agents (vertical transmission)"
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "click>=8.5,<9",
+  "pyyaml>=6.0.3,<7",
+  # La CLI opérateur orchestre tout le dépôt : elle dépend de chaque package et service du workspace.
+  "cgp-domain",
+  "cgp-calc-engine",
+  "cgp-params",
+  "cgp-storage",
+  "cgp-legal-rag",
+  "cgp-compliance",
+  "cgp-verification",
+  "cgp-agents",
+  "cgp-agent-runtime",
+  "cgp-tools-lambda",
+  "cgp-profile-api",
+  "cgp-review-workflow",
+  "cgp-ingestion",
+  "cgp-migrations",
+]
+
+[project.scripts]
+cgp = "cgp.cli:main"
+
+[build-system]
+requires = ["uv_build>=0.8.8,<0.9"]
+build-backend = "uv_build"
+
+[tool.uv]
+required-version = ">=0.8.8"
+
+[tool.uv.workspace]
+members = ["packages/*", "services/*"]
+
+[tool.uv.sources]
+cgp-domain = { workspace = true }
+cgp-calc-engine = { workspace = true }
+cgp-params = { workspace = true }
+cgp-storage = { workspace = true }
+cgp-legal-rag = { workspace = true }
+cgp-compliance = { workspace = true }
+cgp-verification = { workspace = true }
+cgp-agents = { workspace = true }
+cgp-agent-runtime = { workspace = true }
+cgp-tools-lambda = { workspace = true }
+cgp-profile-api = { workspace = true }
+cgp-review-workflow = { workspace = true }
+cgp-ingestion = { workspace = true }
+cgp-migrations = { workspace = true }
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1,<10",
+  "pytest-cov>=7.1,<8",
+  "hypothesis>=6.168,<7",
+  "mypy>=2.3,<3",
+  "ruff>=0.16.8,<0.17",
+  "nbmake>=1.5.5,<2",
+  "ipykernel>=7.3,<8",
+  "nbformat>=5.11,<6",
+  "pre-commit>=4.6,<5",
+  "pip-audit>=2.10,<3",
+  "types-pyyaml>=6.0.12",
+]
+
+# ---------------------------------------------------------------------------
+# Qualité
+# ---------------------------------------------------------------------------
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+src = ["src", "packages/*/src", "services/*/src", "tests"]
+extend-exclude = ["notebooks", "frontend", "docs", "*.md"]
+
+[tool.ruff.lint]
+select = [
+  "E", "W", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RET", "ARG", "PTH",
+  "ERA", "PL", "RUF", "S", "T20", "ANN", "D", "TID", "ISC", "PIE", "PERF", "FURB", "LOG", "G",
+]
+ignore = [
+  "D105", # docstring dans les méthodes magiques
+  "D107", # docstring dans __init__
+  "ISC001", # incompatible avec le formateur
+]
+
+[tool.ruff.lint.per-file-ignores]
+"**/tests/**" = ["S101", "D", "PLR2004", "ANN", "ARG"]
+"src/cgp/cli.py" = ["T20"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.isort]
+known-first-party = [
+  "cgp", "cgp_domain", "cgp_calc_engine", "cgp_params", "cgp_storage", "cgp_legal_rag",
+  "cgp_compliance", "cgp_verification", "cgp_agents", "cgp_agent_runtime", "cgp_tools_lambda",
+  "cgp_profile_api", "cgp_review_workflow", "cgp_ingestion", "cgp_migrations",
+]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+warn_unreachable = true
+pretty = true
+show_error_codes = true
+files = ["src", "packages", "services", "tests"]
+exclude = ["notebooks", "frontend", "\\.venv"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "packages", "services", "evals"]
+addopts = "-ra -q --strict-markers --import-mode=importlib"
+markers = [
+  "golden: cas de référence de bout en bout (Bedrock requis)",
+  "integration: tests d'intégration contre le compte dev",
+  "storage: tests nécessitant PostgreSQL (testcontainers)",
+]
+filterwarnings = ["error"]
+
+[tool.coverage.run]
+branch = true
+source = ["src", "packages", "services"]
+omit = ["*/tests/*"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true

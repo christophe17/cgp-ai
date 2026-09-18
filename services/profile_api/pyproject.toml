@@ -1,0 +1,14 @@
+[project]
+name = "cgp-profile-api"
+version = "0.1.0"
+description = "API HTTP profil pour le frontend et le back-office (API Gateway + Lambda)."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "cgp-domain",
+  "cgp-storage",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.8,<0.9"]
+build-backend = "uv_build"

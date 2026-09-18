@@ -1,0 +1,128 @@
+# Analyse statique sur chaque PR ; plan de toutes les couches de dev en commentaire de PR ;
+# apply de dev à la fusion sur main (couche par couche, dans l'ordre des dépendances).
+name: terraform
+
+on:
+  pull_request:
+    paths: [infra/**, .tflint.hcl, .github/workflows/terraform*.yml]
+  push:
+    branches: [main]
+    paths: [infra/**, .tflint.hcl, .github/workflows/terraform*.yml]
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+concurrency:
+  group: terraform-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.15.8"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "0"
+
+jobs:
+  static:
+    name: fmt, validate, tflint, trivy
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: hashicorp/setup-terraform@dfe3c3f87815947d99a8997f908cb6525fc44e9e # v4.0.1
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+      - name: terraform fmt
+        run: terraform fmt -check -recursive -diff infra
+      - name: terraform validate (toutes les racines)
+        run: |
+          for root in infra/global/organization infra/global/accounts/* infra/envs/*/*; do
+            echo "== $root"
+            terraform -chdir="$root" init -backend=false -input=false >/dev/null
+            terraform -chdir="$root" validate
+          done
+      - uses: terraform-linters/setup-tflint@1cf010d3c7aef302051ccdb68c14c5dc2efa34ef # v6.3.1
+        with:
+          tflint_version: v0.64.0
+      - name: tflint
+        run: |
+          tflint --init --config "$GITHUB_WORKSPACE/.tflint.hcl"
+          cd infra && tflint --recursive --config "$GITHUB_WORKSPACE/.tflint.hcl" --format compact
+      - uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: config
+          scan-ref: infra
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+
+  plan-dev:
+    name: plan dev
+    needs: static
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    strategy:
+      fail-fast: false
+      matrix:
+        layer: [foundation, platform, agents, frontend]
+    uses: ./.github/workflows/terraform-layer.yml
+    with:
+      env: dev
+      layer: ${{ matrix.layer }}
+      apply: false
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
+
+  comment:
+    name: commentaire de PR
+    needs: plan-dev
+    if: always() && github.event_name == 'pull_request' && needs.plan-dev.result != 'skipped'
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            const marker = '<!-- terraform-plan-dev -->';
+            const runUrl = `${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const status = '${{ needs.plan-dev.result }}';
+            const body = `${marker}\n### Terraform plan \`dev\` : **${status}**\n\nLe détail de chaque couche est dans le résumé du run : ${runUrl}`;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number, per_page: 100,
+            });
+            const existing = comments.find((c) => c.body && c.body.startsWith(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }
+
+  apply-dev-foundation:
+    if: github.event_name == 'push'
+    needs: static
+    uses: ./.github/workflows/terraform-layer.yml
+    with: { env: dev, layer: foundation, apply: true }
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
+
+  apply-dev-platform:
+    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-foundation.result != 'failure'
+    needs: apply-dev-foundation
+    uses: ./.github/workflows/terraform-layer.yml
+    with: { env: dev, layer: platform, apply: true }
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
+
+  apply-dev-agents:
+    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-platform.result != 'failure'
+    needs: apply-dev-platform
+    uses: ./.github/workflows/terraform-layer.yml
+    with: { env: dev, layer: agents, apply: true }
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
+
+  apply-dev-frontend:
+    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-agents.result != 'failure'
+    needs: apply-dev-agents
+    uses: ./.github/workflows/terraform-layer.yml
+    with: { env: dev, layer: frontend, apply: true }
+    secrets:
+      TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}

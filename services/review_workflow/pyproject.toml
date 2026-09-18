@@ -1,0 +1,13 @@
+[project]
+name = "cgp-review-workflow"
+version = "0.1.0"
+description = "Validation conseiller : Step Functions (task token) + Lambdas."
+readme = "README.md"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "cgp-storage",
+]
+
+[build-system]
+requires = ["uv_build>=0.8.8,<0.9"]
+build-backend = "uv_build"

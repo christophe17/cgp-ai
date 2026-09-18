@@ -1,0 +1,4 @@
+# Copier en terraform.tfvars (ignoré par git : adresse e-mail).
+account_id                 = "000000000000"
+budget_limit_usd           = 70
+budget_notification_emails = ["prenom.nom@example.com"]
