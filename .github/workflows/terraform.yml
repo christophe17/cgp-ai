@@ -104,7 +104,7 @@ jobs:
       TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
 
   apply-dev-platform:
-    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-foundation.result != 'failure'
+    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-foundation.result == 'success'
     needs: apply-dev-foundation
     uses: ./.github/workflows/terraform-layer.yml
     with: { env: dev, layer: platform, apply: true }
@@ -112,7 +112,7 @@ jobs:
       TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
 
   apply-dev-agents:
-    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-platform.result != 'failure'
+    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-platform.result == 'success'
     needs: apply-dev-platform
     uses: ./.github/workflows/terraform-layer.yml
     with: { env: dev, layer: agents, apply: true }
@@ -120,7 +120,7 @@ jobs:
       TF_PLAN_ARTIFACT_KEY: ${{ secrets.TF_PLAN_ARTIFACT_KEY }}
 
   apply-dev-frontend:
-    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-agents.result != 'failure'
+    if: github.event_name == 'push' && !cancelled() && needs.apply-dev-agents.result == 'success'
     needs: apply-dev-agents
     uses: ./.github/workflows/terraform-layer.yml
     with: { env: dev, layer: frontend, apply: true }
