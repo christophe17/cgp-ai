@@ -41,7 +41,7 @@ Tant que 1 à 5 ne sont pas faits : le job `plan-dev` de la CI est rouge (pas de
 
 | Critère | État |
 |---|---|
-| `uv run pytest` et `make notebooks-ci` passent en CI | à confirmer au premier run GitHub |
+| `uv run pytest` et `make notebooks-ci` passent en CI | **oui** (run `ci` 35348485387 du 2026-09-18 : 4 jobs verts) |
 | `terraform plan` passe sur toutes les couches de `dev` en CI | bloqué par le bootstrap |
 | Un `apply` manuel vers `staging` ou `prod` est impossible (aucun credential local) | bloqué par le bootstrap (permission sets lecture seule) |
 

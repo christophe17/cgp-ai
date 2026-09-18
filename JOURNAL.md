@@ -41,6 +41,10 @@ GitHub, notebook 00, guides 00 et 10, carte des compétences, runbooks, `STATE.m
   secret de dépôt (`TF_PLAN_ARTIFACT_KEY`), déchiffré dans le job d'apply.
 - *Adresses e-mail racine des comptes.* Elles ne doivent pas figurer dans un dépôt public :
   `infra/global/**/terraform.tfvars` est ignoré par git, un `.example` porte des valeurs fictives.
+- *Chaîne d'applies `dev` perméable.* Au premier run sur `main`, `apply-dev-agents` a démarré alors
+  que `apply-dev-platform` avait été sauté : la condition `result != 'failure'` laisse passer `skipped`.
+  Corrigé par `result == 'success'` (un run réutilisable dont l'apply est sauté faute de changement
+  conclut quand même `success`). Leçon : en chaîne de déploiement, exiger le succès, pas l'absence d'échec.
 - *SES en sandbox* en `eu-central-1` : 200 envois/jour vers des destinataires vérifiés. Sortie de
   sandbox à demander en phase 6, avant la validation conseiller.
 
